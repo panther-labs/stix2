@@ -1,0 +1,55 @@
+name: pull-request-workflow
+
+#Triggers
+on:
+  pull_request:
+
+jobs:
+  verify-code:
+    name: Verify Code
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up Go 1.13
+        uses: actions/setup-go@v1
+        with:
+          go-version: 1.13
+        id: go
+      - name: Check out code
+        uses: actions/checkout@v2
+      - uses: actions/cache@v2
+        id: cache
+        with:
+          path: |
+            ./*.go
+            ./go.mod
+            ./go.sum
+          key: ${{ runner.os }}-${{ hashFiles('**') }}
+      - name: Run fmt
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: make fmt
+      - name: Run importorder
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: |
+          export PATH=$PATH:$(go env GOPATH)/bin # See https://github.com/actions/setup-go/issues/14
+          GO111MODULE=off go get -u github.com/pavius/impi/cmd/impi
+          make importorder
+  go-unit-tests:
+    name: Go Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up Go
+        uses: actions/setup-go@v1
+        with:
+          go-version: 1.13
+        id: go
+      - name: Check out code
+        uses: actions/checkout@v2
+      - uses: actions/cache@v2
+        id: cache
+        with:
+          path: |
+            ./*.go
+          key: ${{ runner.os }}-unit-${{ hashFiles('**') }}
+      - name: Unit Tests
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: make test
