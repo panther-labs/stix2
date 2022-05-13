@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestAttackPattern(t *testing.T) {
@@ -108,6 +109,12 @@ func TestAttackPattern(t *testing.T) {
 		assert.Equal("CAPEC-163", obj.ExternalReferences[0].ExternalID)
 		assert.Equal(ts, obj.Created.Time)
 		assert.Equal(ts, obj.Modified.Time)
+	})
+
+	t.Run("should return empty mitre url and id", func(t *testing.T) {
+		attack := &AttackPattern{}
+		require.Empty(t, attack.MitreID())
+		require.Empty(t, attack.MitreURL())
 	})
 }
 

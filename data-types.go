@@ -96,6 +96,11 @@ type ExternalReference struct {
 	ExternalID string `json:"external_id,omitempty"`
 }
 
+// IsMitre returns true if the reference is sourced by MITRE
+func (e ExternalReference) IsMitre() bool {
+	return strings.HasPrefix(e.Name, "mitre")
+}
+
 // NewExternalReference creates a new external reference.
 func NewExternalReference(name, description, url, externalID string, hashes map[HashAlgorithm]string) (*ExternalReference, error) {
 	if name == "" {
@@ -173,6 +178,11 @@ func (i Identifier) ForTypes(typ ...STIXType) bool {
 		}
 	}
 	return false
+}
+
+// String returns the string representation
+func (i Identifier) String() string {
+	return string(i)
 }
 
 // HasValidIdentifier checks that the STIXObject has a valid identifier.
@@ -281,6 +291,12 @@ const (
 	TypeMalwareAnalysis STIXType = "malware-analysis"
 	// TypeMarkingDefinition is used for marking definition type.
 	TypeMarkingDefinition STIXType = "marking-definition"
+	// TypeMitreCollection is used for mitre collection types
+	TypeMitreCollection STIXType = "x-mitre-collection"
+	// TypeMitreMatrix is used for mitre matrix types
+	TypeMitreMatrix STIXType = "x-mitre-matrix"
+	// TypeMitreTactic is used for mitre tactic types
+	TypeMitreTactic STIXType = "x-mitre-tactic"
 	// TypeMutex is used for mutex type.
 	TypeMutex STIXType = "mutex"
 	// TypeNetworkTraffic is used for network traffic type.
@@ -395,6 +411,7 @@ const (
 // objectives. When referencing the Lockheed Martin Cyber Kill Chain™, the
 // kill_chain_name property MUST be LockheedMartinCyberKillChain.
 type KillChainPhase struct {
+	collectionReference
 	// Name is the name of the kill chain. The value of this property SHOULD be
 	// all lowercase and SHOULD use hyphens instead of spaces or underscores as
 	// word separators.
@@ -403,6 +420,15 @@ type KillChainPhase struct {
 	// property SHOULD be all lowercase and SHOULD use hyphens instead of
 	// spaces or underscores as word separators.
 	Phase string `json:"phase_name"`
+}
+
+func (k KillChainPhase) MitreTactic() *MitreTactic {
+	ref := k.collectionReference.ref
+	if ref == nil {
+		return nil
+	}
+
+	return ref.mitreTacticsByShortName[k.Phase]
 }
 
 // LockheedMartinCyberKillChain is the kill chain name for Lockheed Martin

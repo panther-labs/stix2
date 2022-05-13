@@ -73,7 +73,8 @@ func New(opts ...CollectionOption) *Collection {
 // Collection is a collection of STIX objects. This object is not part of the
 // STIX specification.
 type Collection struct {
-	objects map[STIXType]map[Identifier]interface{}
+	objects                 map[STIXType]map[Identifier]interface{}
+	mitreTacticsByShortName map[string]*MitreTactic
 
 	// Options
 	noSort           bool
@@ -107,6 +108,9 @@ func (c *Collection) Add(obj STIXObject) error {
 	if c.objects == nil {
 		c.objects = make(map[STIXType]map[Identifier]interface{})
 	}
+	if c.mitreTacticsByShortName == nil {
+		c.mitreTacticsByShortName = make(map[string]*MitreTactic)
+	}
 
 	bucket, ok := c.objects[obj.GetType()]
 	if !ok {
@@ -122,6 +126,9 @@ func (c *Collection) Add(obj STIXObject) error {
 	// Add to the order if we should track it and item is new.
 	if !c.noSort && !update {
 		c.order = append(c.order, obj.GetID())
+	}
+	if setter, ok := obj.(referenceSetter); ok {
+		setter.SetReference(c)
 	}
 
 	return nil
@@ -610,6 +617,60 @@ func (c *Collection) MarkingDefinitions() []*MarkingDefinition {
 	return data
 }
 
+// MitreCollection returns the MitreCollection with the identifier id.
+func (c *Collection) MitreCollection(id Identifier) *MitreCollection {
+	obj := c.getObject(TypeMitreCollection, id)
+	if obj == nil {
+		return nil
+	}
+	return obj.(*MitreCollection)
+}
+
+// MitreCollections returns all MitreCollections defined in the collection.
+func (c *Collection) MitreCollections() []*MitreCollection {
+	data := make([]*MitreCollection, 0, len(c.objects[TypeMitreCollection]))
+	for _, v := range c.objects[TypeMitreCollection] {
+		data = append(data, v.(*MitreCollection))
+	}
+	return data
+}
+
+// MitreMatrix returns the MitreMatrix with the identifier id.
+func (c *Collection) MitreMatrix(id Identifier) *MitreMatrix {
+	obj := c.getObject(TypeMitreMatrix, id)
+	if obj == nil {
+		return nil
+	}
+	return obj.(*MitreMatrix)
+}
+
+// MitreMatrices returns all Mitre Matrices defined in the collection.
+func (c *Collection) MitreMatrices() []*MitreMatrix {
+	data := make([]*MitreMatrix, 0, len(c.objects[TypeMitreMatrix]))
+	for _, v := range c.objects[TypeMitreMatrix] {
+		data = append(data, v.(*MitreMatrix))
+	}
+	return data
+}
+
+// MitreTactic returns the MitreTactic with the identifier id.
+func (c *Collection) MitreTactic(id Identifier) *MitreTactic {
+	obj := c.getObject(TypeMitreTactic, id)
+	if obj == nil {
+		return nil
+	}
+	return obj.(*MitreTactic)
+}
+
+// MitreTactics returns all MitreTactics defined in the collection.
+func (c *Collection) MitreTactics() []*MitreTactic {
+	data := make([]*MitreTactic, 0, len(c.objects[TypeMitreTactic]))
+	for _, v := range c.objects[TypeMitreTactic] {
+		data = append(data, v.(*MitreTactic))
+	}
+	return data
+}
+
 // Mutex returns the Mutex with the identifier id.
 func (c *Collection) Mutex(id Identifier) *Mutex {
 	obj := c.getObject(TypeMutex, id)
@@ -1025,6 +1086,9 @@ func mappingByType() map[STIXType]interface{} {
 		TypeMalware:             &Malware{},
 		TypeMalwareAnalysis:     &MalwareAnalysis{},
 		TypeMarkingDefinition:   &MarkingDefinition{},
+		TypeMitreCollection:     &MitreCollection{},
+		TypeMitreMatrix:         &MitreMatrix{},
+		TypeMitreTactic:         &MitreTactic{},
 		TypeMutex:               &Mutex{},
 		TypeNetworkTraffic:      &NetworkTraffic{},
 		TypeNote:                &Note{},
@@ -1106,6 +1170,11 @@ func processObjects(collection *Collection, objects []json.RawMessage) error {
 		if err != nil {
 			return errors.Wrapf(err, "failed to add %s object to collection", typ)
 		}
+	}
+
+	// run another pass of attack patterns to make sure all associations are there
+	for _, a := range collection.AttackPatterns() {
+		a.SetReference(collection)
 	}
 	return nil
 }
