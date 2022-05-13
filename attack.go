@@ -13,6 +13,7 @@ package stix2
 // textual descriptions of the pattern along with references to
 // externally-defined taxonomies of attacks such as CAPEC.
 type AttackPattern struct {
+	ref *Collection
 	STIXDomainObject
 	// Name is used to identify the Attack Pattern.
 	Name string `json:"name"`
@@ -24,6 +25,47 @@ type AttackPattern struct {
 	// KillChainPhase is a list of Kill Chain Phases for which this Attack
 	// Pattern is used.
 	KillChainPhase []*KillChainPhase `json:"kill_chain_phases,omitempty"`
+
+	IsMitreSubTechnique      bool     `json:"x_mitre_is_subtechnique,omitempty"`
+	MitreDomains             []string `json:"x_mitre_domains,omitempty"`
+	MitrePlatforms           []string `json:"x_mitre_platforms,omitempty"`
+	MitreShortName           string   `json:"x_mitre_shortname,omitempty"`
+	MitreDataSources         []string `json:"x_mitre_data_sources,omitempty"`
+	MitreDefenseByPassed     []string `json:"x_mitre_defense_bypassed,omitempty"`
+	MitreSystemRequirements  []string `json:"x_mitre_system_requirements,omitempty"`
+	MitrePermissionsRequired []string `json:"x_mitre_permissions_required,omitempty"`
+}
+
+func (a *AttackPattern) SetReference(collection *Collection) {
+	a.ref = collection
+	for _, k := range a.KillChainPhase {
+		k.SetReference(collection)
+		if tactic := k.MitreTactic(); tactic != nil {
+			tactic.SetAttackPattern(a)
+		}
+	}
+}
+
+// MitreID returns the external mitre id for this attack pattern
+func (a *AttackPattern) MitreID() string {
+	for _, ref := range a.ExternalReferences {
+		if ref.IsMitre() {
+			return ref.ExternalID
+		}
+	}
+
+	return ""
+}
+
+// MitreURL returns the external mitre url for this attack pattern
+func (a *AttackPattern) MitreURL() string {
+	for _, ref := range a.ExternalReferences {
+		if ref.IsMitre() {
+			return ref.URL
+		}
+	}
+
+	return ""
 }
 
 func (a *AttackPattern) MarshalJSON() ([]byte, error) {

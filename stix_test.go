@@ -409,6 +409,66 @@ func TestFromReaderAll(t *testing.T) {
 	assert.Nil(c.X509Certificate(Identifier("")))
 }
 
+func TestFromReaderMitreMobileSpec_2_1(t *testing.T) {
+	f, err := getResource("mitre-mobile-spec-2.1.json")
+	require.NoError(t, err)
+	defer f.Close()
+
+	c, err := FromReader(f)
+	t.Run("should parse mitre matrix as expected", func(t *testing.T) {
+		matrices := c.MitreMatrices()
+		require.Len(t, matrices, 2)
+		for _, m := range matrices {
+			matrix := c.MitreMatrix(m.ID)
+			assert.NotEmpty(t, matrix, "could not find %s", m.ID)
+			assert.Equal(t, m, matrix)
+			tactics := m.Tactics()
+			assert.NotEmpty(t, tactics)
+			assert.NotEmpty(t, m.Tactics())
+			require.Len(t, m.TacticRefs, len(tactics))
+			for idx, tactic := range tactics {
+				require.Equal(t, tactic.ID.String(), m.TacticRefs[idx], "tactics not in expected order")
+			}
+		}
+	})
+
+	t.Run("should parse mitre tactics as expected", func(t *testing.T) {
+		tactics := c.MitreTactics()
+		require.Len(t, tactics, 14)
+
+		for _, tactic := range tactics {
+			require.NotEmpty(t, tactic.MitreID())
+			require.NotEmpty(t, tactic.MitreURL())
+			tac := c.MitreTactic(tactic.ID)
+			require.Equal(t, tac, tactic)
+			attacks := tactic.AttackPatterns()
+			require.NotEmpty(t, attacks, "empty techniques detected for tactic %s", tactic.Name)
+			for _, attack := range attacks {
+				require.NotEmpty(t, attack.MitreID())
+				require.NotEmpty(t, attack.MitreURL())
+				for _, killChain := range attack.KillChainPhase {
+					assert.NotNil(t, killChain.MitreTactic(), "could not find tactic for", killChain.Phase)
+				}
+			}
+
+			require.NotEmpty(t, tactic.ExternalReferences)
+			require.True(t, tactic.ExternalReferences[0].IsMitre())
+		}
+	})
+
+	t.Run("should parse mitre collection as expected", func(t *testing.T) {
+		collections := c.MitreCollections()
+		require.Len(t, collections, 1)
+		for _, col := range collections {
+			col2 := c.MitreCollection(col.ID)
+			require.Equal(t, col, col2)
+			require.NotEmpty(t, col.Name)
+			require.NotEmpty(t, col.Version)
+		}
+	})
+
+}
+
 func TestAllObjectsCollection(t *testing.T) {
 	assert := assert.New(t)
 	c := &Collection{}
