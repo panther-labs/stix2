@@ -419,6 +419,8 @@ func TestFromReaderMitreMobileSpec_2_1(t *testing.T) {
 		matrices := c.MitreMatrices()
 		require.Len(t, matrices, 2)
 		for _, m := range matrices {
+			require.NotEmpty(t, m.MitreID())
+			require.NotEmpty(t, m.MitreURL())
 			matrix := c.MitreMatrix(m.ID)
 			assert.NotEmpty(t, matrix, "could not find %s", m.ID)
 			assert.Equal(t, m, matrix)
