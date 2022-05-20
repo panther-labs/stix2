@@ -56,7 +56,7 @@ func (m *MitreTactic) MitreID() string {
 	return ""
 }
 
-// MitreURL returns the external mitre url for this attack pattern
+// MitreURL returns the external mitre url for this tactic
 func (m *MitreTactic) MitreURL() string {
 	for _, ref := range m.ExternalReferences {
 		if ref.IsMitre() {

@@ -36,3 +36,25 @@ func (m *MitreMatrix) Tactics() []*MitreTactic {
 func (m *MitreMatrix) SetTactics(tactics []*MitreTactic) {
 	m.tactics = tactics
 }
+
+// MitreID returns the external mitre id for this matrix
+func (m *MitreMatrix) MitreID() string {
+	for _, ref := range m.ExternalReferences {
+		if ref.IsMitre() {
+			return ref.ExternalID
+		}
+	}
+
+	return ""
+}
+
+// MitreURL returns the external mitre url for this matrix
+func (m *MitreMatrix) MitreURL() string {
+	for _, ref := range m.ExternalReferences {
+		if ref.IsMitre() {
+			return ref.URL
+		}
+	}
+
+	return ""
+}
